@@ -59,6 +59,7 @@ def wait_for_element(driver, locator_type, locator_value, nth=1, timeout=60):
     :return: The nth element if found, else None
     """
     try:
+        # this is the change
         logging.debug(
             f"Waiting for {nth}-th element: {locator_type} = {locator_value} (timeout: {timeout}s)"
         )
