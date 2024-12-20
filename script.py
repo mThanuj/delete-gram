@@ -122,6 +122,7 @@ while True:
 
         # Wait for the "Not Now" button to be present
         not_now_button = wait_for_element(driver, By.CSS_SELECTOR, "div[role='button']")
+        random_delay(3, 6)
 
         if not_now_button and not_now_button.text == "Not now":
             not_now_button.click()
@@ -136,7 +137,7 @@ while True:
     except StaleElementReferenceException:
         logging.warning("The 'Not Now' button became stale, retrying...")
         # Re-fetch the button if it becomes stale
-        random_delay(1, 2)  # Adding a random delay before retrying
+        random_delay(3, 6)  # Adding a random delay before retrying
     except WebDriverException as e:
         logging.error(f"WebDriverException occurred: {e}")
         driver.quit()  # Optionally quit the driver if the error is critical
@@ -150,6 +151,7 @@ def apply_date_filter(driver, start_date, end_date):
         sort_filter_button = wait_for_element(
             driver, By.XPATH, "//span[text()='Sort & filter']"
         )
+        random_delay(3, 6)
         if sort_filter_button:
             sort_filter_button.click()
             logging.debug("Clicked 'Sort and Filter' button.")
@@ -157,7 +159,7 @@ def apply_date_filter(driver, start_date, end_date):
             logging.error("Sort and Filter button not found.")
             return False
 
-        random_delay(1, 3)  # Random delay before interacting with date inputs
+        random_delay(3, 6)
 
         # Wait for date filter options to appear and automatically select them
         start_date_year = wait_for_element(driver, By.XPATH, "//select[@title='Year:']")
@@ -191,7 +193,8 @@ def apply_date_filter(driver, start_date, end_date):
             logging.error("'Apply' button not found.")
             return False
 
-        random_delay(2, 4)  # Random delay after applying filter
+        random_delay(3, 6)  # Random delay before interacting with date inputs
+
     except Exception as e:
         logging.error(f"Error applying date filter: {e}")
         return False
@@ -219,7 +222,7 @@ def scroll_to_load_likes(driver):
             driver.execute_script("arguments[0].scrollTop += 300;", target_div)
             logging.debug("Scrolled down by 300 pixels within the target div")
 
-            random_delay(1, 2)  # Random delay between scrolls
+            random_delay(3, 6)  # Random delay after applying filter
 
             # Wait for new content to load by checking the div height
             new_height = driver.execute_script(
@@ -233,6 +236,26 @@ def scroll_to_load_likes(driver):
         logging.error(f"Error while scrolling: {e}")
 
 
+def handle_something_went_wrong_button(driver):
+    try:
+        # Wait for all "OK" buttons to be present
+        wait = WebDriverWait(driver, 3)
+        something_went_wrong_buttons = wait.until(
+            EC.presence_of_all_elements_located((By.XPATH, "//div[text()='OK']"))
+        )
+        random_delay(3, 6)
+        # Check if the button list is not empty and click the first button
+        if something_went_wrong_buttons:
+            logging.debug("Found 'OK' buttons, attempting to click the first one.")
+            something_went_wrong_buttons[0].click()
+            logging.debug("Clicked the 'OK' button.")
+        else:
+            logging.debug("No 'OK' buttons found, continuing with the next process.")
+
+    except Exception as e:
+        logging.error(f"Error while handling 'OK' button: {e}")
+
+
 # Wipe likes or comments based on mode
 try:
     if driver.current_url.startswith(COMMENTS_URL if MODE == 1 else LIKES_URL):
@@ -242,9 +265,19 @@ try:
 
         # Apply the date filter
         if apply_date_filter(driver, START_DATE, END_DATE):
-            for _ in range(2):
+            wait = WebDriverWait(driver, 60)
+            like_buttons = wait.until(
+                EC.presence_of_all_elements_located(
+                    (By.XPATH, "//img[@data-bloks-name='bk.components.Image']")
+                )
+            )
+            like_buttons = like_buttons[:15]
+
+            while like_buttons:
+                handle_something_went_wrong_button(driver)
                 # Scroll to load all likes
                 # scroll_to_load_likes(driver)
+                random_delay(3, 6)
 
                 select_button = wait_for_element(
                     driver, By.XPATH, "//span[text()='Select']"
@@ -269,7 +302,6 @@ try:
                                 like_button
                             ).click().perform()  # Click to unlike
                             logging.debug("Clicked to remove a like.")
-                            random_delay(0, 0.3)  # Random delay after clicking
                         except StaleElementReferenceException:
                             logging.warning(
                                 "Stale element encountered while interacting with a like button."
@@ -282,14 +314,14 @@ try:
                         driver, By.XPATH, "//span[text()='Unlike']"
                     )
                     unlike_button.click()
-                    random_delay(2, 5)
+                    random_delay(0, 0.3)  # Random delay after clicking
 
                     unlike_final = wait_for_element(
                         driver, By.XPATH, "//div[text()='Unlike']"
                     )
                     unlike_final.click()
-                    random_delay(2, 5)
 
+                    random_delay(3, 6)
                 logging.debug(
                     f"Finished wiping {'comments' if MODE == 1 else 'likes'} between {START_DATE} and {END_DATE}"
                 )
@@ -300,5 +332,5 @@ try:
 except WebDriverException as e:
     logging.error(f"Error during wiping process: {e}")
 finally:
-    random_delay(4, 8)
+    random_delay(3, 6)
     driver.quit()  # Always quit the driver at the end
